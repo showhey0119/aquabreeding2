@@ -5,6 +5,7 @@ from aquabreeding2.aquabreeding2 import *  # noqa
 from aquabreeding2.aquacpp import *  # noqa
 from aquabreeding2.blup import *  # noqa
 from aquabreeding2.coalescent import *  # noqa
+from aquabreeding2.emess import *  # noqa
 from aquabreeding2.gametogenesis import *  # noqa
 from aquabreeding2.mating import *  # noqa
 from aquabreeding2.phenotype import *  # noqa

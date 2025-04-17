@@ -5,7 +5,7 @@ A module for mating
 import re
 import sys
 import numpy as np
-from aquabreeding import gametogenesis as gg
+import aquabreeding2 as aq
 
 
 def set_mating_design_partial(select_size, design):
@@ -124,7 +124,7 @@ def mating_process(cross_inf, par_inf, pro_ls, n_pro):
     # for parental female index, male index, no. progeny
     for i, j, p_size in zip(cross_inf[:, 0], cross_inf[:, 1], family_size):
         for _ in range(p_size):
-            gg.produce_progeny(par_inf.pop_f[i], par_inf.pop_m[j],
+            aq.produce_progeny(par_inf.pop_f[i], par_inf.pop_m[j],
                                pro_ls[i_pro])
             i_pro += 1
     if i_pro != n_pro:

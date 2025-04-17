@@ -27,36 +27,7 @@ Todo:
 
 import sys
 import numpy as np
-from aquabreeding import coalescent as co
-from aquabreeding import mating as mt
-from aquabreeding import phenotype as ph
-from aquabreeding import popinfo as po
-from aquabreeding import selection as se
-
-
-def check_tuple(obj, tag, l_tuple):
-    '''
-    Check the arguments of AquaBreeding class
-
-    Check if an argument is tuple and
-    if the length of the tuple is correct
-
-    Args:
-        obj (unknown): A focal variable
-        tag (str): Name of the variable
-        l_tuple (int): Correct tuple length
-    '''
-    if not isinstance(obj, tuple):
-        sys.exit(f'{tag} should be tuple')
-    if len(obj) != l_tuple:
-        if tag in ('founder_size',  'progeny_size'):
-            e_mess = '(No. males, No. females)'
-        if tag == 'chrom':
-            e_mess = '(Chrom no., chrom len (bp), male cM/Mb, female cM/Mb)'
-        if tag in ('n_female', 'n_male'):
-            e_mess = 'Length should be equal to be n_pop'
-        sys.exit(f'Length of {tag} is incorrect\n{e_mess}')
-# check_tuple
+import aquabreeding2 as aq
 
 
 class AquaBreeding:
@@ -64,11 +35,12 @@ class AquaBreeding:
     Class for aquaculture breeding
 
     Args:
-        founder_size (tuple): Nos. females and  males in the founder population
+        founder_size (tuple): (Nos. females and  males) in each population
+        n_population (int): No. breeding population
         chrom (tuple): Chrom num, chrom len (bp), female cM/Mb, male cM/Mb
         mean_phenotype (float): Mean phenotype
         var_phenotype (float): Variance of phenotype
-        heritability (float): Heeritability
+        heritability (float): Heritability
         n_wild (int): No. individuals in a extra natural population,
                      default None
 
@@ -81,30 +53,35 @@ class AquaBreeding:
         cross_inf (numpy.ndarray): Index pairs of female and male parents
         gblup (int): No. neutral SNPs
     '''
-    def __init__(self, founder_size, chrom, mean_phenotype, var_phenotype,
-                 heritability, n_wild=None):
+    def __init__(self, founder_size, n_population, chrom, mean_phenotype,
+                 var_phenotype, heritability, n_wild=None):
         '''
         constructor
         '''
         # check argument
-        check_tuple(founder_size, 'founder_size', 2)
-        check_tuple(chrom, 'chrom', 4)
+        aq.check_founder(founder_size, n_population)
+        aq.check_tuple(chrom, 'chrom', 4)
+        self.founder_size = founder_size
+        self.n_population = n_population
         # chromosome info
         self.chrom = chrom
         # parental population
-        self.par_inf = po.PopulationInfo(founder_size, self.chrom, n_wild)
-        self.par_inf.init_founder()
+        self.par_inf = []
+        for i in range(self.n_population):
+            self.par_inf.append(aq.PopulationInfo(self.founder_size[i],
+                                                  self.chrom, n_wild))
+            self.par_inf[i].init_founder()
         # progeny population
-        self.pro_inf = None
+        self.pro_inf = [None] * self.n_population
         # Phenotype info
-        self.phe_inf = ph.PhenotypeInfo(mean_phenotype, var_phenotype,
-                                        heritability)
+        self.phe_inf = aq.PhenotypeInfo(self.n_population, mean_phenotype,
+                                        var_phenotype, heritability)
         # No. causal SNPs
         self.n_snp = None
         # No. neutral SNPs
         self.gblup = None
         # Mating design
-        self.cross_inf = None
+        self.cross_inf = [None] * self.n_population
     # __init__
 
     def snp(self, model, n_snp, gblup=None, n_pop=None, fst=None,
@@ -123,16 +100,18 @@ class AquaBreeding:
         '''
         # check args
         if n_pop is not None:
+            sys.exit('Under construction')
             check_tuple(n_female, 'n_female', n_pop)
             check_tuple(n_male, 'n_male', n_pop)
             if sum(n_female) != self.par_inf.n_f:
                 sys.exit(f'Sum of n_female is not {self.par_inf.n_f}')
             if sum(n_male) != self.par_inf.n_m:
                 sys.exit(f'Sum of n_male is not {self.par_inf.n_m}')
+        aq.check_model(model)
         self.n_snp = n_snp
         self.gblup = gblup
         # coalescent simulation
-        co.coalescent_simulation(model, self.par_inf, self.n_snp, self.gblup,
+        aq.coalescent_simulation(model, self.par_inf, self.n_snp, self.gblup,
                                  n_pop, fst, n_female, n_male)
     # snp
 
@@ -149,10 +128,15 @@ class AquaBreeding:
             select_size (tuple): Set nos. selected females and males
         '''
         if select_size is None:
-            select_size = (self.par_inf.n_f, self.par_inf.n_m)
-        else:
-            check_tuple(select_size, 'select_size', 2)
-        self.cross_inf = mt.set_mating_design(design, select_size)
+            select_size = [None] * self.n_population
+        aq.check_tuple(design, 'design', self.n_population)
+        aq.check_tuple(select_size, 'select_size', self.n_population)
+        for i in range(self.n_population):
+            if select_size[i] is None:
+                select_size[i] = (self.par_inf[i].n_f, self.par_inf[i].n_m)
+            else:
+                aq.check_tuple(select_size[i], 'select_size2', 2)
+            self.cross_inf[i] = aq.set_mating_design(design[i], select_size[i])
     # mating_design
 
     def mating(self, progeny_size):
@@ -162,16 +146,18 @@ class AquaBreeding:
         Args:
             progeny_size (tuple): Nos. female and male progenies
         '''
-        check_tuple(progeny_size, 'progeny_size', 2)
-        if self.pro_inf is None:
-            self.pro_inf = po.PopulationInfo(progeny_size, self.chrom, None)
-            self.pro_inf.init_progeny()
-        else:
-            self.pro_inf.change_size(progeny_size)
-        mt.start_mating(self.cross_inf, self.par_inf, self.pro_inf)
+        aq.check_tuple(progeny_size, 'progeny_size', self.n_population)
+        for i in range(self.n_population):
+            aq.check_tuple(progeny_size[i], 'progeny_size2', 2)
+            if self.pro_inf[i] is None:
+                self.pro_inf[i] = aq.PopulationInfo(progeny_size[i], self.chrom)
+                self.pro_inf[i].init_progeny()
+            else:
+                self.pro_inf[i].change_size(progeny_size[i])
+            aq.start_mating(self.cross_inf[i], self.par_inf[i], self.pro_inf[i])
     # mating
 
-    def breeding_value(self, method='BLUP'):
+    def breeding_value(self, method):
         '''
         Calculate phenotype and breeding value
 
@@ -181,15 +167,19 @@ class AquaBreeding:
                           relationship matrix is used.  If 'no', breeding
                           values are not estimated. Default 'BLUP'
         '''
+        aq.check_tuple(method, 'method', self.n_population)
         # genotype matrix
-        self.pro_inf.genotype_matrix(self.n_snp, self.gblup)
+        for i in range(self.n_population):
+            self.pro_inf[i].genotype_matrix(self.n_snp, self.gblup)
         # Calculate phenotype and breeding value
-        self.phe_inf.calculate_bv(method, self.par_inf, self.pro_inf,
-                                  self.n_snp, self.gblup)
+        for i in range(self.n_population):
+            aq.check_method(method[i])
+            self.phe_inf.calculate_bv(method[i], self.par_inf[i], self.pro_inf,
+                                      self.n_snp, self.gblup, i)
     # breeding_value
 
-    def selection(self, target='bv', method='mass', top_prop=1.0,
-                  n_family=-1, select_size=None, max_r=None):
+    def selection(self, target, method, top_prop=None, n_family=None,
+                  select_size=None, max_r=None):
         '''
         Select parents of next generation
 
@@ -213,14 +203,25 @@ class AquaBreeding:
         Returns:
             int: if 0, excuted correctly. if 1, terminated irregurally
         '''
-        if select_size is not None:
-            check_tuple(select_size, 'select_size', 2)
-            self.par_inf.change_size(select_size)
-        else:
-            select_size = (self.par_inf.n_f, self.par_inf.n_m)
-        check_r = se.start_selection(self.par_inf, self.pro_inf, self.phe_inf,
-                                     target, method, self.cross_inf, top_prop,
-                                     n_family, select_size, max_r)
+        if top_prop is None:
+            top_prop = [1.0] * self.n_population
+        if n_family is None:
+            n_family = [None] * self.n_population
+        if max_r is None:
+            max_r = [None] * self.n_population
+        if select_size is None:
+            select_size = [None] * self.n_population
+        aq.check_tuple(select_size, 'select_size', self.n_population)
+        for i in range(self.n_population):
+            if select_size[i] is None:
+                select_size[i] = (self.par_inf[i].n_f, self.par_inf[i].n_m)
+            else:
+                aq.check_tuple(select_size[i], 'select_size2', 2)
+            self.par_inf[i].change_size(select_size[i])
+            check_r = aq.start_selection(self.par_inf[i], self.pro_inf[i],
+                                         self.phe_inf, target[i], method[i],
+                                         self.cross_inf[i], top_prop[i],
+                                         n_family[i], select_size[i], max_r[i], i)
         return check_r
     # selection
 
@@ -283,7 +284,45 @@ class AquaBreeding:
         '''
         check_tuple(num, 'num', 2)
         self.par_inf.replace_wild(num)
-    # use_natural
+    # wild_parent
+
+    def get_mean_phenotype(self):
+        '''
+        Output mean phenotypes of all breeding populations
+        
+        Returns:
+            list: mean phenotypes
+        '''
+        res_p = []
+        for i in range(self.n_population):
+            res_p.append(np.mean(self.phe_inf.pheno_v[i]))
+        return res_p
+    # get_mean_phenotype
+
+    def get_mean_ibd(self):
+        '''
+        Output meaninbreeding coefficient of all breeding populations
+
+        Returns:
+            list: mean ibd
+        '''
+        res_i = []
+        for i in range(self.n_population):
+            res_i.append(np.mean(np.diag(self.pro_inf[i].a_mat) - 1.0))
+        return res_i
+    # get_mean_ibd
+
+    def merge_population(self, target):
+        '''
+        Merge two breeding populations and remove second one
+        Keep selected females from a population and males from
+        another population
+
+        Args:
+            target (list): Index (starts with 1) of two breeding populations
+        '''
+        aq.merge_pop(par_inf, target)
+        self.n_population -= 1
 # AquaBreeding
 
 

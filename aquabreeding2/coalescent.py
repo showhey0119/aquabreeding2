@@ -32,6 +32,26 @@ def copy_snp(chrom_inf, tmp_pos, tmp_snp, i_c):
 # copy_snp
 
 
+def unique_pos(l_chrom, n_divide):
+    '''
+    Generate the positions of SNPs without overlapping
+
+    Args:
+        l_chrom (int): Length of a chromosome
+        n_divide (int): No. SNPs
+
+    Returns:
+        numpy.ndarray: List of the positions
+    '''
+    while True:
+        tmp_pos = np.random.randint(low=0, high=l_chrom, size=n_divide,
+                                    dtype=np.int32)
+        if len(set(tmp_pos)) == n_divide:
+            tmp_pos.sort()
+            return tmp_pos
+# unique_pos
+
+
 def add_founder_snp(par_inf, snp_mat):
     '''
     Add SNPs to the founder
@@ -40,11 +60,12 @@ def add_founder_snp(par_inf, snp_mat):
         par_inf (PopulationInfo): founder population
         snp_mat (numpy.ndarray): SNP matrix (np. haplotypes x np. SNP)
     '''
-    l_chrom = par_inf.chrom[1]
+    l_chrom = par_inf[0].chrom[1]
+    for_pos = np.arange(l_chrom)
     # No. SNPs
     c_snp = np.shape(snp_mat)[1]
     # Divide SNPs into chromosomes
-    n_chrom = par_inf.chrom[0]
+    n_chrom = par_inf[0].chrom[0]
     n_divide = np.random.multinomial(c_snp, [1.0/n_chrom]*n_chrom)
     s_st = None
     s_en = None
@@ -57,18 +78,22 @@ def add_founder_snp(par_inf, snp_mat):
         s_en = s_st + n_divide[i]
         tmp_snp = snp_mat[:, s_st:s_en]
         # position
-        tmp_pos = np.random.randint(low=0, high=l_chrom, size=n_divide[i],
-                                    dtype=np.int32)
+        #tmp_pos = np.random.randint(low=0, high=l_chrom, size=n_divide[i],
+        #                            dtype=np.int32)
+        tmp_pos = np.random.choice(for_pos, size=n_divide[i],
+                                   replace=False).astype(np.int32)
         tmp_pos.sort()
+        #tmp_pos = unique_pos(l_chrom, n_divide[i])
         # Store the data
         i_c = 0
-        for individual in par_inf.pop_f:
-            i_c = copy_snp(individual.chrom_ls[i], tmp_pos, tmp_snp, i_c)
-        for individual in par_inf.pop_m:
-            i_c = copy_snp(individual.chrom_ls[i], tmp_pos, tmp_snp, i_c)
-        if par_inf.n_wild is not None:
-            for individual in par_inf.pop_w:
+        for p in par_inf:
+            for individual in p.pop_f:
                 i_c = copy_snp(individual.chrom_ls[i], tmp_pos, tmp_snp, i_c)
+            for individual in p.pop_m:
+                i_c = copy_snp(individual.chrom_ls[i], tmp_pos, tmp_snp, i_c)
+            #if p.n_wild is not None:
+            #for individual in p.pop_w:
+            #    i_c = copy_snp(individual.chrom_ls[i], tmp_pos, tmp_snp, i_c)
 # add_founder_snp
 
 
@@ -231,18 +256,21 @@ def coalescent_simulation(model, par_inf, n_snp, gblup, n_pop, fst, n_female,
     '''
     # Wright-Fisher model
     if model == 'WF':
-        n_sample = par_inf.n_f + par_inf.n_m
-        if par_inf.n_wild is not None:
-            n_sample += par_inf.n_wild
+        n_sample = 0
+        for p in par_inf:
+            n_sample += p.n_f + p.n_m
+        #if par_inf.n_wild is not None:
+        #    n_sample += par_inf.n_wild
         snp_mat = run_msprime(n_snp, gblup, n_sample)
     # Structured populations
     elif model == 'SP':
-        if par_inf.n_wild is not None:
-            sys.exit('Not implemented yet')
-        snp_mat = structured_population(n_snp, gblup, n_pop, fst, n_female,
-                                        n_male)
-    else:
-        sys.exit(f'{model} is under development')
+        sys.exit('Under construction')
+    #    if par_inf.n_wild is not None:
+    #        sys.exit('Not implemented yet')
+    #    snp_mat = structured_population(n_snp, gblup, n_pop, fst, n_female,
+    #                                    n_male)
+    #else:
+    #    sys.exit(f'{model} is under development')
     add_founder_snp(par_inf, snp_mat)
 # coalescent_simulation
 

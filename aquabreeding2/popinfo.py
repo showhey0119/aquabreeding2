@@ -5,7 +5,7 @@ A module for population, individual, and chromosome class
 from copy import deepcopy
 from random import sample
 import numpy as np
-from aquabreeding import aquacpp as cpp
+import aquabreeding2 as aq
 
 
 def merge_snp(snp_pro, pop_x, stt):
@@ -22,8 +22,8 @@ def merge_snp(snp_pro, pop_x, stt):
         i_col = 0
         for chrom in individual.chrom_ls:
             n_pos = np.shape(chrom.position)[0]
-            cpp.copy_1D_to_2D(chrom.snp_mat, snp_pro, i_row, i_col)
-            cpp.copy_1D_to_2D(chrom.snp_pat, snp_pro, i_row+1, i_col)
+            aq.copy_1D_to_2D(chrom.snp_mat, snp_pro, i_row, i_col)
+            aq.copy_1D_to_2D(chrom.snp_pat, snp_pro, i_row+1, i_col)
             i_col += n_pos
         i_row += 2
 # merge_snp
@@ -234,7 +234,7 @@ class PopulationInfo:
         merge_snp(snp_pro, self.pop_m, 2*self.n_f)
         # Convert SNP to genotype matrix
         self.gen_mat = np.full((n_total, all_snp), -7, dtype=np.int32)
-        cpp.snp_to_genotype(self.gen_mat, snp_pro)
+        aq.snp_to_genotype(self.gen_mat, snp_pro)
     # genotype_matrix
 
     def new_founder_id(self):
@@ -267,6 +267,7 @@ class PopulationInfo:
         Note:
             Exchange deepcopy into other fast function
         '''
+        sys.exit('Under construction')
         f_sel = sample(range(self.n_f), num[0])
         m_sel = sample(range(self.n_m), num[1])
         for i in f_sel:

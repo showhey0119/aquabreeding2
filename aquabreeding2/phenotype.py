@@ -3,7 +3,7 @@ A module for phenotype
 '''
 
 import numpy as np
-from aquabreeding import blup as bl
+import  aquabreeding2 as aq
 
 
 def snp_index(n_snp, gblup):
@@ -100,6 +100,27 @@ def variance_effect(var_p, h2_p, pro_gen):
 # variance_effect
 
 
+def genmat_effect_all(pro_inf, index_eff):
+    '''
+    Combine genotype matrix with effects of all populations
+
+    Args:
+        pro_inf (list): List of progeny populations
+        index_eff (numpy.ndarray): Index of SNPs with effects
+
+    Returns:
+        numpy.ndarray: combined genotype matrix with effects
+    '''
+    res_mat = None
+    for p in pro_inf:
+        if res_mat is None:
+            res_mat = p.gen_mat.copy()
+        else:
+            res_mat = np.concatenate([res_mat, p.gen_mat], axis=0)
+    return res_mat[:, index_eff]
+# genmat_effect_all
+
+
 class PhenotypeInfo:
     '''
     Class for phenotype information
@@ -108,11 +129,13 @@ class PhenotypeInfo:
     variance components are stored
 
     Args:
+        n_population (int): 
         mean_phenotype (float): Mean phenotype
         var_phenotype (float): Variance of phenotype
         heritatility (float): Heritability
 
     Attributes:
+        n_population (int): No. breeding populations
         mean_pv (float): Mean phenotype
         var_p (float): Variance of phenotype
         h2_p (float): Heritability
@@ -130,40 +153,43 @@ class PhenotypeInfo:
         index_eff (numpy.ndarray): Index of causal SNPs
         _first_gen (bool): Check if the fist generation or not
     '''
-    def __init__(self, mean_phenotype, var_phenotype, heritability):
+    def __init__(self, n_population, mean_phenotype, var_phenotype,
+                 heritability):
         '''
         Constructor
         '''
-        self.mean_pv = mean_phenotype
+        self.n_population = n_population
+        self.mean_pv = [mean_phenotype, mean_phenotype]
         self.var_p = var_phenotype
         self.h2_p = heritability
         self.v_g = None
         self.v_e = None
         self.v_s = None
         self.effect_size = None
-        self.pheno_v = None
-        self.true_bv = None
-        self.hat_bv = None
-        self.hat_beta = None
-        self.hat_vg = None
-        self.hat_ve = None
+        self.pheno_v = [None] * self.n_population
+        self.true_bv = [None] * self.n_population
+        self.hat_bv = [None] * self.n_population
+        self.hat_beta = [None] * self.n_population
+        self.hat_vg = [None] * self.n_population
+        self.hat_ve = [None] * self.n_population
         # Index of netural and causal SNPs
         self.index_neu = None
         self.index_eff = None
         # to normalize true breeding value as zero
-        self._first_gen = True
+        self._first_gen = [True] * self.n_population
     # __init__
 
-    def calculate_bv(self, method, par_inf, pro_inf, n_snp, gblup):
+    def calculate_bv(self, method, par_inf, pro_inf, n_snp, gblup, x):
         '''
         Calculate phenotype and breeding value
 
         Args:
             method (str): 'BLUP', 'GBLUP', or 'no'
             par_inf (PopulationInfo): Founder population
-            pro_inf (PopulationInfo): Progeny population
+            pro_inf (list): List of PpulationInfo for progenies
             n_snp (int): No. causal SNPs
             gblup (int): No. neutral SNPs
+            x (int): index of progeny populations
 
         Note:
             The first half of self.pheno_v contains phenotypes of females, and
@@ -172,38 +198,39 @@ class PhenotypeInfo:
         # Set index of neutral and causal SNPs
         if self.index_eff is None:
             self.index_neu, self.index_eff = snp_index(n_snp, gblup)
-        # Genotypte matrix of causal SNPs
-        gen_eff = pro_inf.gen_mat[:, self.index_eff]
         # Set effect size
         if self.effect_size is None:
+            gen_eff_all = genmat_effect_all(pro_inf, self.index_eff)
             self.v_g, self.v_e, self.v_s = variance_effect(self.var_p,
                                                            self.h2_p,
-                                                           gen_eff)
+                                                           gen_eff_all)
             self.effect_size = np.random.normal(loc=0.0,
                                                 scale=np.sqrt(self.v_s),
                                                 size=n_snp)
-        n_progeny = pro_inf.n_f + pro_inf.n_m
+        # Genotypte matrix of causal SNPs
+        gen_eff = pro_inf[x].gen_mat[:, self.index_eff]
+        n_progeny = pro_inf[x].n_f + pro_inf[x].n_m
         # true bv
-        self.true_bv = gen_eff @ self.effect_size.T
-        if self._first_gen:
-            self.mean_pv -= np.mean(self.true_bv)
-            self._first_gen = False
+        self.true_bv[x] = gen_eff @ self.effect_size.T
+        if self._first_gen[x]:
+            self.mean_pv[x] -= np.mean(self.true_bv[x])
+            self._first_gen[x] = False
         # Phenotype
         rand_norm = np.random.normal(loc=0.0, scale=np.sqrt(self.v_e),
                                      size=n_progeny)
-        self.pheno_v = self.mean_pv + self.true_bv + rand_norm
+        self.pheno_v[x] = self.mean_pv[x] + self.true_bv[x] + rand_norm
         # Numerator relationship matrix
-        bl.nrm_cpp(par_inf, pro_inf)
+        aq.nrm_cpp(par_inf, pro_inf[x])
         # BLUP
         if method == 'BLUP':
             # Breeding value estimation
-            bl.bv_estimation(self, pro_inf.a_mat)
+            aq.bv_estimation(self, pro_inf[x].a_mat, x)
         # GBLUP
         elif method == 'GBLUP':
             # Genomic relationship matrix
-            bl.convert_gmatrix(pro_inf, pro_inf.gen_mat[:, self.index_neu])
+            aq.convert_gmatrix(pro_inf[x], pro_inf[x].gen_mat[:, self.index_neu])
             # Breeding value estimation
-            bl.bv_estimation(self, pro_inf.g_mat)
+            aq.bv_estimation(self, pro_inf[x].g_mat, x)
     # calclaate_phenotype
 # PhenotypeInfo
 

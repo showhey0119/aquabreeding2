@@ -7,10 +7,10 @@ from math import isclose
 from random import choice
 from operator import itemgetter
 import numpy as np
-from aquabreeding import aquacpp as cpp
+import aquabreeding2 as aq
 
 
-def select_value(target, phe_inf):
+def select_value(target, phe_inf, x):
     '''
     Set values, by which progenies are selected
 
@@ -23,11 +23,11 @@ def select_value(target, phe_inf):
         numpy.ndarray: breeding value, phenotype or random number
     '''
     if target == 'bv':
-        return phe_inf.hat_bv
+        return phe_inf.hat_bv[x]
     if target == 'phenotype':
-        return phe_inf.pheno_v
+        return phe_inf.pheno_v[x]
     if target == 'random':
-        n_pro = np.shape(phe_inf.pheno_v)[0]
+        n_pro = np.shape(phe_inf.pheno_v[x])[0]
         return np.random.rand(n_pro)
     sys.exit('Invalid in select_value')
 # select_value
@@ -364,18 +364,39 @@ def copy_individual(ls_founder, ls_progeny, ls_index):
             if par_chrom.position is None:
                 par_chrom.position = pro_chrom.position.copy()
             else:
-                cpp.copy_1D(pro_chrom.position, par_chrom.position)
+                aq.copy_1D(pro_chrom.position, par_chrom.position)
             if par_chrom.snp_mat is None:
                 par_chrom.snp_mat = pro_chrom.snp_mat.copy()
             else:
-                cpp.copy_1D(pro_chrom.snp_mat, par_chrom.snp_mat)
+                aq.copy_1D(pro_chrom.snp_mat, par_chrom.snp_mat)
             if par_chrom.snp_pat is None:
                 par_chrom.snp_pat = pro_chrom.snp_pat.copy()
             else:
-                cpp.copy_1D(pro_chrom.snp_pat, par_chrom.snp_pat)
+                aq.copy_1D(pro_chrom.snp_pat, par_chrom.snp_pat)
             founder.mat_id = ls_progeny[x_index].mat_id
             founder.pat_id = ls_progeny[x_index].pat_id
 # copy_individual
+
+
+def marge_pop(par_inf, target):
+    '''
+    Merge two populations
+
+    Args:
+        pro_inf (list): List of breeding populations
+        target (list): Index (start with 1) of merged populations
+    '''
+    if target[0] > target[1]:
+        tmp_v = target[0]
+        target[0] = target[1]
+        target[1] = tmp_v
+    elif target[0] == target[1]:
+        sys.exit(f'Same index {target}')
+    i_st = target[0] - 1
+    i_en = target[1] - 1
+    p_1 = par_inf[i_st]
+    p_2 = par_inf[i_en]
+
 
 
 def nextgen_parents(par_inf, pro_inf, f2_index, m2_index):
@@ -398,7 +419,7 @@ def nextgen_parents(par_inf, pro_inf, f2_index, m2_index):
 
 
 def start_selection(par_inf, pro_inf, phe_inf, target, method, cross_inf,
-                    top_prop, n_family, select_size, max_r):
+                    top_prop, n_family, select_size, max_r, x):
     '''
     Args:
         par_inf (PopulationInfo): Founder population
@@ -418,12 +439,13 @@ def start_selection(par_inf, pro_inf, phe_inf, target, method, cross_inf,
         n_family (int): Number of families to be selected
         select_size (tulple): Number of selected founders
         max_r (float): R' among selected individuals is less than this value
+        x (int): Index of progeny population
 
     Returns:
         int: If 0, excuted correctly, if 1, terminated irreguraly
     '''
     # Selection target
-    select_val = select_value(target, phe_inf)
+    select_val = select_value(target, phe_inf, x)
     # Merge info
     # dict for family, all values are zero
     fam_d = {}
@@ -442,22 +464,22 @@ def start_selection(par_inf, pro_inf, phe_inf, target, method, cross_inf,
         f_index, m_index = within_family_selection(summary_pro, select_size,
                                                    fam_d, top_prop)
     # family selection
-    elif method == 'family':
-        f_index, m_index = family_selection(summary_pro, select_size, fam_d,
-                                            top_prop, n_family)
+    #elif method == 'family':
+    #    f_index, m_index = family_selection(summary_pro, select_size, fam_d,
+    #                                        top_prop, n_family)
     # A/G matrix based selection
-    elif method == 'RvalueA':
-        f_index, m_index, c_r = fvalue_selection(summary_pro, select_size,
-                                                 top_prop, pro_inf.a_mat,
-                                                 max_r, pro_inf.n_f)
-        if c_r == 1:
-            return 1
-    elif method == 'RvalueG':
-        f_index, m_index, c_r = fvalue_selection(summary_pro, select_size,
-                                                 top_prop, pro_inf.g_mat,
-                                                 max_r, pro_inf.n_f)
-        if c_r == 1:
-            return 1
+    #elif method == 'RvalueA':
+    #    f_index, m_index, c_r = fvalue_selection(summary_pro, select_size,
+    #                                             top_prop, pro_inf.a_mat,
+    #                                             max_r, pro_inf.n_f)
+    #    if c_r == 1:
+    #        return 1
+    #elif method == 'RvalueG':
+    #    f_index, m_index, c_r = fvalue_selection(summary_pro, select_size,
+    #                                             top_prop, pro_inf.g_mat,
+    #                                             max_r, pro_inf.n_f)
+    #    if c_r == 1:
+    #        return 1
     else:
         sys.exit(f'{method=} is invalid')
     # arrange parents based on cross_info

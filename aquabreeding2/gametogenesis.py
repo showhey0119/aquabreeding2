@@ -7,8 +7,7 @@ Notes:
 
 import sys
 import numpy as np
-from aquabreeding import aquacpp as cpp
-
+import aquabreeding2 as aq
 
 def new_gamete(chrom_info, ex_n_rec):
     '''
@@ -53,17 +52,17 @@ def new_gamete(chrom_info, ex_n_rec):
     for i in range(n_rec):
         # which sister-chromatids are recombined
         if bivalent[i] == 0:
-            cpp.crossing_over(break_point[i], chrom_p1, chrom_m1,
-                              chrom_info.position)
+            aq.crossing_over(break_point[i], chrom_p1, chrom_m1,
+                             chrom_info.position)
         elif bivalent[i] == 1:
-            cpp.crossing_over(break_point[i], chrom_p1, chrom_m2,
-                              chrom_info.position)
+            aq.crossing_over(break_point[i], chrom_p1, chrom_m2,
+                             chrom_info.position)
         elif bivalent[i] == 2:
-            cpp.crossing_over(break_point[i], chrom_p2, chrom_m1,
-                              chrom_info.position)
+            aq.crossing_over(break_point[i], chrom_p2, chrom_m1,
+                             chrom_info.position)
         elif bivalent[i] == 3:
-            cpp.crossing_over(break_point[i], chrom_p2, chrom_m2,
-                              chrom_info.position)
+            aq.crossing_over(break_point[i], chrom_p2, chrom_m2,
+                             chrom_info.position)
     # which chromaid is inherited
     if bivalent[n_rec] == 0:
         return chrom_p1
@@ -96,13 +95,13 @@ def produce_progeny(par_f, par_m, pro_x):
         if pro_x.chrom_ls[i].snp_mat is None:
             pro_x.chrom_ls[i].snp_mat = new_gamete1.copy()
         else:
-            cpp.copy_1D(new_gamete1, pro_x.chrom_ls[i].snp_mat)
+            aq.copy_1D(new_gamete1, pro_x.chrom_ls[i].snp_mat)
         # gamete from male
         new_gamete2 = new_gamete(par_m.chrom_ls[i], par_m.n_recm)
         if pro_x.chrom_ls[i].snp_pat is None:
             pro_x.chrom_ls[i].snp_pat = new_gamete2.copy()
         else:
-            cpp.copy_1D(new_gamete2, pro_x.chrom_ls[i].snp_pat)
+            aq.copy_1D(new_gamete2, pro_x.chrom_ls[i].snp_pat)
     # Set ID
     pro_x.mat_id = par_f.sample_id
     pro_x.pat_id = par_m.sample_id
