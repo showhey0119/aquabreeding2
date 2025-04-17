@@ -7,8 +7,8 @@ import aquabreeding2 as aq
 
 
 def check_model(model):
-    if model not in ['WF', 'SP']:
-        sys.exit('model should be \'WF\' or \'SP\'')
+    if model not in ['WF', 'SP', 'buri']:
+        sys.exit('model should be \'WF\' \'buri\' or \'SP\'')
 # check_model
 
 

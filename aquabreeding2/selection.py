@@ -378,7 +378,7 @@ def copy_individual(ls_founder, ls_progeny, ls_index):
 # copy_individual
 
 
-def marge_pop(par_inf, target):
+def merge_pop(par_inf, target):
     '''
     Merge two populations
 
@@ -396,7 +396,19 @@ def marge_pop(par_inf, target):
     i_en = target[1] - 1
     p_1 = par_inf[i_st]
     p_2 = par_inf[i_en]
-
+    # adjust the size
+    p_1.change_size(new_size=(p_1.n_f, p_2.n_m))
+    # copy males in p_2 to ones in p_1
+    for m1, m2 in zip(p_1.pop_m, p_2.pop_m):
+        m1.mat_id = 0
+        m1.pad_id = 1
+        for c1, c2 in zip(m1.chrom_ls, m2.chrom_ls):
+            aq.copy_1D(c2.position, c1.position)
+            aq.copy_1D(c2.snp_mat, c1.snp_mat)
+            aq.copy_1D(c2.snp_pat, c1.snp_pat)
+    p_1.new_founder_id()
+    del par_inf[i_en]
+# merge_pop
 
 
 def nextgen_parents(par_inf, pro_inf, f2_index, m2_index):
@@ -474,12 +486,12 @@ def start_selection(par_inf, pro_inf, phe_inf, target, method, cross_inf,
     #                                             max_r, pro_inf.n_f)
     #    if c_r == 1:
     #        return 1
-    #elif method == 'RvalueG':
-    #    f_index, m_index, c_r = fvalue_selection(summary_pro, select_size,
-    #                                             top_prop, pro_inf.g_mat,
-    #                                             max_r, pro_inf.n_f)
-    #    if c_r == 1:
-    #        return 1
+    elif method == 'RvalueG':
+        f_index, m_index, c_r = fvalue_selection(summary_pro, select_size,
+                                                 top_prop, pro_inf.g_mat,
+                                                 max_r, pro_inf.n_f)
+        if c_r == 1:
+            return 1
     else:
         sys.exit(f'{method=} is invalid')
     # arrange parents based on cross_info

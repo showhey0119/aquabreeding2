@@ -239,6 +239,69 @@ def run_msprime(n_snp, gblup, n_sample):
 # run_msprime
 
 
+def get_n_t(p_opt_bott_recov_exp, N_anc):
+    n_b, t_b, n_c, t_c, n_d = p_opt_bott_recov_exp
+    N_b = n_b * N_anc
+    T_b = 2 * t_b * N_anc
+    N_c = n_c * N_anc
+    T_c = 2 * t_c * N_anc
+    N_d = n_d * N_anc
+    return N_b, T_b, N_c, T_c, N_d
+# get_n_t
+
+
+def run_buri(n_snp, gblup, n_sample):
+    '''
+    Run msprime under a standard Wright-Fisher model
+
+    Args:
+        n_snp (int): No. causal SNPs
+        gblup (int): No. neutral SNPs
+        n_sample (int): No. individuals
+
+    Retunrs:
+        numpy.ndarray: SNP matrix (no. haplotypes x no. SNPs)
+    '''
+    if gblup is None:
+        n_total = n_snp
+    else:
+        n_total = n_snp + gblup
+    rate = (4e-8, 2e-7)  # to simulate almost independent SNPs
+    p_opt = [0.000907912478, 0.05172956, 0.30586, 0.1125, 9.740]
+    N_anc = 100_000
+    N_b, T_b, N_c, T_c, N_d = get_n_t(p_opt, N_anc)
+    g_rate = -1.0 * np.log(N_c/N_d) / T_c
+    demography = mp.Demography()
+    demography.add_population(initial_size=N_d, growth_rate=g_rate)
+    demography.add_population_parameters_change(time=T_c, initial_size=N_b, growth_rate=0)
+    demography.add_population_parameters_change(time=T_c+T_b, initial_size=N_anc,
+                                                growth_rate=0)
+    gsa_out = np.empty((0, 2*n_sample), dtype=np.int32)
+    gsa_count = 0  # until n_snp
+    while True:
+        gsa_ts = mp.sim_ancestry(samples=n_sample,
+                                 recombination_rate=rate[1],
+                                 model=mp.StandardCoalescent(),
+                                 sequence_length=200,
+                                 discrete_genome=False,
+                                 demography=demography)
+        gsa_ts = mp.sim_mutations(gsa_ts,
+                                  rate=rate[0],
+                                  model=mp.BinaryMutationModel(),
+                                  discrete_genome=False,
+                                  keep=False)
+        for g_ts in gsa_ts.variants():
+            tmp_gen = g_ts.genotypes
+            # skip monomorphic
+            a_fq = np.sum(tmp_gen)
+            if a_fq in (0, 2*n_sample):
+                continue
+            gsa_out = np.append(gsa_out, np.array([tmp_gen]), axis=0)
+            gsa_count += 1
+            if gsa_count == n_total:
+                return gsa_out.T.copy()
+# run_buri
+
 def coalescent_simulation(model, par_inf, n_snp, gblup, n_pop, fst, n_female,
                           n_male):
     '''
@@ -262,6 +325,12 @@ def coalescent_simulation(model, par_inf, n_snp, gblup, n_pop, fst, n_female,
         #if par_inf.n_wild is not None:
         #    n_sample += par_inf.n_wild
         snp_mat = run_msprime(n_snp, gblup, n_sample)
+    # buri
+    elif model == 'buri':
+        n_sample = 0
+        for p in par_inf:
+            n_sample += p.n_f + p.n_m
+        snp_mat = run_buri(n_snp, gblup, n_sample)
     # Structured populations
     elif model == 'SP':
         sys.exit('Under construction')

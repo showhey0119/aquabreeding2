@@ -90,7 +90,7 @@ class AquaBreeding:
         Generate SNPs
 
         Args:
-            model (str): 'WF' or 'SP'
+            model (str): 'WF' 'buri' or 'SP'
             n_snp (int): No. causal SNPs
             gblup (int): No. neutral SNPs
             n_pop (int): No. populations
@@ -321,8 +321,9 @@ class AquaBreeding:
         Args:
             target (list): Index (starts with 1) of two breeding populations
         '''
-        aq.merge_pop(par_inf, target)
+        aq.merge_pop(self.par_inf, target)
         self.n_population -= 1
+    # merge_population
 # AquaBreeding
 
 
