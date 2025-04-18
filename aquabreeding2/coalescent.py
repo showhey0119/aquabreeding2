@@ -89,6 +89,7 @@ def add_founder_snp(par_inf, snp_mat):
         for p in par_inf:
             for individual in p.pop_f:
                 i_c = copy_snp(individual.chrom_ls[i], tmp_pos, tmp_snp, i_c)
+        for p in par_inf:
             for individual in p.pop_m:
                 i_c = copy_snp(individual.chrom_ls[i], tmp_pos, tmp_snp, i_c)
             #if p.n_wild is not None:
@@ -239,8 +240,18 @@ def run_msprime(n_snp, gblup, n_sample):
 # run_msprime
 
 
-def get_n_t(p_opt_bott_recov_exp, N_anc):
-    n_b, t_b, n_c, t_c, n_d = p_opt_bott_recov_exp
+def get_n_t(p_opt, N_anc):
+    '''
+    Convert buri demographic parameters of dadi into msprime
+
+    Args:
+        p_opt (list): Estimated parameters by dadi
+        N_anc (float): Ancestral population size
+
+    Returns:
+        tuple: Parameters for msprime
+    '''
+    n_b, t_b, n_c, t_c, n_d = p_opt
     N_b = n_b * N_anc
     T_b = 2 * t_b * N_anc
     N_c = n_c * N_anc
@@ -333,13 +344,12 @@ def coalescent_simulation(model, par_inf, n_snp, gblup, n_pop, fst, n_female,
         snp_mat = run_buri(n_snp, gblup, n_sample)
     # Structured populations
     elif model == 'SP':
-        sys.exit('Under construction')
-    #    if par_inf.n_wild is not None:
-    #        sys.exit('Not implemented yet')
-    #    snp_mat = structured_population(n_snp, gblup, n_pop, fst, n_female,
-    #                                    n_male)
-    #else:
-    #    sys.exit(f'{model} is under development')
+        #if par_inf.n_wild is not None:
+        #    sys.exit('Not implemented yet')
+        snp_mat = structured_population(n_snp, gblup, n_pop, fst, n_female,
+                                        n_male)
+    else:
+        sys.exit(f'{model} is not implemented')
     add_founder_snp(par_inf, snp_mat)
 # coalescent_simulation
 

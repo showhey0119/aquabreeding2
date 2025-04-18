@@ -142,6 +142,8 @@ class PopulationInfo:
         # Numerator/genomic relationship matrix
         self.a_mat = None
         self.g_mat = None
+        # Genomic relationship matrix for genomic prediction
+        self.g_mat2 = None
         # Extra wild individuals
         self.n_wild = n_wild
         self.pop_w = []

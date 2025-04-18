@@ -476,9 +476,9 @@ def start_selection(par_inf, pro_inf, phe_inf, target, method, cross_inf,
         f_index, m_index = within_family_selection(summary_pro, select_size,
                                                    fam_d, top_prop)
     # family selection
-    #elif method == 'family':
-    #    f_index, m_index = family_selection(summary_pro, select_size, fam_d,
-    #                                        top_prop, n_family)
+    elif method == 'family':
+        f_index, m_index = family_selection(summary_pro, select_size, fam_d,
+                                            top_prop, n_family)
     # A/G matrix based selection
     #elif method == 'RvalueA':
     #    f_index, m_index, c_r = fvalue_selection(summary_pro, select_size,

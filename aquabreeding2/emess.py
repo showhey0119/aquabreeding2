@@ -19,8 +19,8 @@ def check_method(method):
     Args:
         methos (str): method
     '''
-    if method not in ['BLUP', 'GBLUP', 'no']:
-        sys.exit('method should be BLUP, GBLUP, or no')
+    if method not in ['BLUP', 'GBLUP', 'GP', 'no']:
+        sys.exit('method should be BLUP, GBLUP, GP or no')
 # check_method
 
 
@@ -45,7 +45,7 @@ def check_tuple(obj, tag, l_tuple):
             e_mess = '(Chrom no., chrom len (bp), male cM/Mb, female cM/Mb)'
         if tag in ('n_female', 'n_male'):
             e_mess = 'Length should be equal to be n_pop'
-        sys.exit(f'Length of {tag} is incorrect\n{e_mess}')
+        sys.exit(f'Length of {tag} is incorrect')
 # check_tuple
 
 

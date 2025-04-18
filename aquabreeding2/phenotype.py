@@ -179,7 +179,8 @@ class PhenotypeInfo:
         self._first_gen = [True] * self.n_population
     # __init__
 
-    def calculate_bv(self, method, par_inf, pro_inf, n_snp, gblup, x):
+    def calculate_bv(self, method, par_inf, pro_inf, n_snp, gblup, x,
+                     train_gen, train_phe):
         '''
         Calculate phenotype and breeding value
 
@@ -190,6 +191,8 @@ class PhenotypeInfo:
             n_snp (int): No. causal SNPs
             gblup (int): No. neutral SNPs
             x (int): index of progeny populations
+            train_gen (numpy.ndarray): genotype matrix of training population
+            train_phe (numpy.ndarray): phenotypes of training population
 
         Note:
             The first half of self.pheno_v contains phenotypes of females, and
@@ -228,9 +231,19 @@ class PhenotypeInfo:
         # GBLUP
         elif method == 'GBLUP':
             # Genomic relationship matrix
-            aq.convert_gmatrix(pro_inf[x], pro_inf[x].gen_mat[:, self.index_neu])
+            aq.convert_gmatrix(pro_inf[x], pro_inf[x].gen_mat[:, self.index_neu], 0)
             # Breeding value estimation
             aq.bv_estimation(self, pro_inf[x].g_mat, x)
+        # genomic prediction by GBLUP
+        elif method == 'GP':
+            # Genomic relationship matrix
+            aq.convert_gmatrix(pro_inf[x], pro_inf[x].gen_mat[:, self.index_neu], 0)
+            # G matrix for genomic prediction
+            gen_all = np.concatenate([train_gen[:, self.index_neu],
+                                     pro_inf[x].gen_mat[:, self.index_neu]],
+                                     axis=0)
+            aq.convert_gmatrix(pro_inf[x], gen_all, 1)
+            aq.bv_estimation2(self, pro_inf[x].g_mat2, x, train_phe)
     # calclaate_phenotype
 # PhenotypeInfo
 

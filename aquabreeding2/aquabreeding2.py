@@ -82,6 +82,9 @@ class AquaBreeding:
         self.gblup = None
         # Mating design
         self.cross_inf = [None] * self.n_population
+        # Genomic prediction for GBLUP
+        self.train_gen = None
+        self.train_phe = None
     # __init__
 
     def snp(self, model, n_snp, gblup=None, n_pop=None, fst=None,
@@ -99,14 +102,13 @@ class AquaBreeding:
             n_male (tuple): Nos. males in populations
         '''
         # check args
-        if n_pop is not None:
-            sys.exit('Under construction')
-            check_tuple(n_female, 'n_female', n_pop)
-            check_tuple(n_male, 'n_male', n_pop)
-            if sum(n_female) != self.par_inf.n_f:
-                sys.exit(f'Sum of n_female is not {self.par_inf.n_f}')
-            if sum(n_male) != self.par_inf.n_m:
-                sys.exit(f'Sum of n_male is not {self.par_inf.n_m}')
+        #if n_pop is not None:
+        #    check_tuple(n_female, 'n_female', n_pop)
+        #    check_tuple(n_male, 'n_male', n_pop)
+        #    if sum(n_female) != self.par_inf.n_f:
+        #        sys.exit(f'Sum of n_female is not {self.par_inf.n_f}')
+        #    if sum(n_male) != self.par_inf.n_m:
+        #        sys.exit(f'Sum of n_male is not {self.par_inf.n_m}')
         aq.check_model(model)
         self.n_snp = n_snp
         self.gblup = gblup
@@ -157,7 +159,7 @@ class AquaBreeding:
             aq.start_mating(self.cross_inf[i], self.par_inf[i], self.pro_inf[i])
     # mating
 
-    def breeding_value(self, method):
+    def breeding_value(self, method, training=False):
         '''
         Calculate phenotype and breeding value
 
@@ -166,6 +168,7 @@ class AquaBreeding:
                           to estimate breeding values.  If 'GBLUP', genomic
                           relationship matrix is used.  If 'no', breeding
                           values are not estimated. Default 'BLUP'
+            training (bool): Keep training data for GBLUP or not
         '''
         aq.check_tuple(method, 'method', self.n_population)
         # genotype matrix
@@ -175,7 +178,20 @@ class AquaBreeding:
         for i in range(self.n_population):
             aq.check_method(method[i])
             self.phe_inf.calculate_bv(method[i], self.par_inf[i], self.pro_inf,
-                                      self.n_snp, self.gblup, i)
+                                      self.n_snp, self.gblup, i, self.train_gen,
+                                      self.train_phe)
+        if training:
+            for i, p in enumerate(self.pro_inf):
+                if self.train_gen is None:
+                    self.train_gen = p.gen_mat
+                else:
+                    self.train_gen = np.concatenate([self.train_gen, p.gen_mat], axis=0)
+                if self.train_phe is None:
+                    self.train_phe = self.phe_inf.pheno_v[i].copy()
+                else:
+                    self.train_phe = np.concatenate([self.train_phe,
+                                                    self.phe_inf.pheno_v[i]],
+                                                    axis=0)
     # breeding_value
 
     def selection(self, target, method, top_prop=None, n_family=None,
