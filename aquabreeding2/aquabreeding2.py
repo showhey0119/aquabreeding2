@@ -159,7 +159,7 @@ class AquaBreeding:
             aq.start_mating(self.cross_inf[i], self.par_inf[i], self.pro_inf[i])
     # mating
 
-    def breeding_value(self, method, training=False):
+    def breeding_value(self, method, training=False, reset_training=False):
         '''
         Calculate phenotype and breeding value
 
@@ -181,6 +181,9 @@ class AquaBreeding:
                                       self.n_snp, self.gblup, i, self.train_gen,
                                       self.train_phe)
         if training:
+            if reset_training:
+                self.train_gen is None
+                self.train_phe is None
             for i, p in enumerate(self.pro_inf):
                 if self.train_gen is None:
                     self.train_gen = p.gen_mat
@@ -325,7 +328,7 @@ class AquaBreeding:
         res_i = []
         for i in range(self.n_population):
             res_i.append(np.mean(np.diag(self.pro_inf[i].a_mat) - 1.0))
-        return res_i
+        return np.array(res_i)
     # get_mean_ibd
 
     def merge_population(self, target):
