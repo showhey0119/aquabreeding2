@@ -10,7 +10,7 @@ import numpy as np
 import aquabreeding2 as aq
 
 
-def select_value(target, phe_inf, x):
+def select_value(target, phe_inf, x_i):
     '''
     Set values, by which progenies are selected
 
@@ -18,16 +18,17 @@ def select_value(target, phe_inf, x):
         target (str): 'bv' (breeding value), 'phenotype' (phenotype), or
                       'random' (random) selection
         phe_inf (PhenotypeInfo): Phenotype information
+        x_i (int): Index of a breeding population
 
     Returns:
         numpy.ndarray: breeding value, phenotype or random number
     '''
     if target == 'bv':
-        return phe_inf.hat_bv[x]
+        return phe_inf.hat_bv[x_i]
     if target == 'phenotype':
-        return phe_inf.pheno_v[x]
+        return phe_inf.pheno_v[x_i]
     if target == 'random':
-        n_pro = np.shape(phe_inf.pheno_v[x])[0]
+        n_pro = np.shape(phe_inf.pheno_v[x_i])[0]
         return np.random.rand(n_pro)
     sys.exit('Invalid in select_value')
 # select_value
@@ -250,7 +251,7 @@ def fvalue_selection(summary_pro, select_size, top_prop, g_mat, max_r, i_rows):
     if n_f != select_size[0] or n_m != select_size[1]:
         print(f'Not enough {select_size}, {n_f} {n_m}, {max_r:.1f}')
         return f_index, m_index, 1
-        sys.exit(f'Not enough {select_size}, {n_f} {n_m}, {max_r:.2f}')
+        # sys.exit(f'Not enough {select_size}, {n_f} {n_m}, {max_r:.2f}')
     return f_index, m_index, 0
 # fvalue_selection
 
@@ -399,13 +400,13 @@ def merge_pop(par_inf, target):
     # adjust the size
     p_1.change_size(new_size=(p_1.n_f, p_2.n_m))
     # copy males in p_2 to ones in p_1
-    for m1, m2 in zip(p_1.pop_m, p_2.pop_m):
-        m1.mat_id = 0
-        m1.pad_id = 1
-        for c1, c2 in zip(m1.chrom_ls, m2.chrom_ls):
-            aq.copy_1D(c2.position, c1.position)
-            aq.copy_1D(c2.snp_mat, c1.snp_mat)
-            aq.copy_1D(c2.snp_pat, c1.snp_pat)
+    for m_1, m_2 in zip(p_1.pop_m, p_2.pop_m):
+        m_1.mat_id = 0
+        m_1.pad_id = 1
+        for c_1, c_2 in zip(m_1.chrom_ls, m_2.chrom_ls):
+            aq.copy_1D(c_2.position, c_1.position)
+            aq.copy_1D(c_2.snp_mat, c_1.snp_mat)
+            aq.copy_1D(c_2.snp_pat, c_1.snp_pat)
     p_1.new_founder_id()
     del par_inf[i_en]
 # merge_pop
@@ -431,7 +432,7 @@ def nextgen_parents(par_inf, pro_inf, f2_index, m2_index):
 
 
 def start_selection(par_inf, pro_inf, phe_inf, target, method, cross_inf,
-                    top_prop, n_family, select_size, max_r, x):
+                    top_prop, n_family, select_size, max_r, x_i):
     '''
     Args:
         par_inf (PopulationInfo): Founder population
@@ -451,13 +452,13 @@ def start_selection(par_inf, pro_inf, phe_inf, target, method, cross_inf,
         n_family (int): Number of families to be selected
         select_size (tulple): Number of selected founders
         max_r (float): R' among selected individuals is less than this value
-        x (int): Index of progeny population
+        x_i (int): Index of progeny population
 
     Returns:
         int: If 0, excuted correctly, if 1, terminated irreguraly
     '''
     # Selection target
-    select_val = select_value(target, phe_inf, x)
+    select_val = select_value(target, phe_inf, x_i)
     # Merge info
     # dict for family, all values are zero
     fam_d = {}
@@ -480,12 +481,12 @@ def start_selection(par_inf, pro_inf, phe_inf, target, method, cross_inf,
         f_index, m_index = family_selection(summary_pro, select_size, fam_d,
                                             top_prop, n_family)
     # A/G matrix based selection
-    #elif method == 'RvalueA':
-    #    f_index, m_index, c_r = fvalue_selection(summary_pro, select_size,
-    #                                             top_prop, pro_inf.a_mat,
-    #                                             max_r, pro_inf.n_f)
-    #    if c_r == 1:
-    #        return 1
+    elif method == 'RvalueA':
+        f_index, m_index, c_r = fvalue_selection(summary_pro, select_size,
+                                                 top_prop, pro_inf.a_mat,
+                                                 max_r, pro_inf.n_f)
+        if c_r == 1:
+            return 1
     elif method == 'RvalueG':
         f_index, m_index, c_r = fvalue_selection(summary_pro, select_size,
                                                  top_prop, pro_inf.g_mat,

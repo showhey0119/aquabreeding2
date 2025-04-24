@@ -3,10 +3,12 @@ A module for error messages
 '''
 
 import sys
-import aquabreeding2 as aq
 
 
 def check_model(model):
+    '''
+    Check the input demographic model for coalescent simulaitn
+    '''
     if model not in ['WF', 'SP', 'buri']:
         sys.exit('model should be \'WF\' \'buri\' or \'SP\'')
 # check_model
@@ -45,18 +47,20 @@ def check_tuple(obj, tag, l_tuple):
             e_mess = '(Chrom no., chrom len (bp), male cM/Mb, female cM/Mb)'
         if tag in ('n_female', 'n_male'):
             e_mess = 'Length should be equal to be n_pop'
-        sys.exit(f'Length of {tag} is incorrect')
+        sys.exit(f'Length of {tag} is incorrect\n{e_mess}')
 # check_tuple
 
 
 def check_founder(founder_size, n_population):
+    '''
+    Check the founder_size arugument
+    '''
     l_founder = len(founder_size)
     if l_founder != n_population:
         sys.exit('Length of founder_size should be equal to n_population')
     for f_s in founder_size:
         check_tuple(f_s, 'founder_size', 2)
 # check_founder
-
 
 
 def main():

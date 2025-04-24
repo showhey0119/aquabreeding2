@@ -2,6 +2,7 @@
 A module for population, individual, and chromosome class
 '''
 
+import sys
 from copy import deepcopy
 from random import sample
 import numpy as np

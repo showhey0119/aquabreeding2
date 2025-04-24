@@ -9,6 +9,7 @@ import sys
 import numpy as np
 import aquabreeding2 as aq
 
+
 def new_gamete(chrom_info, ex_n_rec):
     '''
     Simulate gametogenesis

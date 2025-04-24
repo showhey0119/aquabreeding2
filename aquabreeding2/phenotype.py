@@ -3,7 +3,7 @@ A module for phenotype
 '''
 
 import numpy as np
-import  aquabreeding2 as aq
+import aquabreeding2 as aq
 
 
 def snp_index(n_snp, gblup):
@@ -112,11 +112,11 @@ def genmat_effect_all(pro_inf, index_eff):
         numpy.ndarray: combined genotype matrix with effects
     '''
     res_mat = None
-    for p in pro_inf:
+    for p_inf in pro_inf:
         if res_mat is None:
-            res_mat = p.gen_mat.copy()
+            res_mat = p_inf.gen_mat.copy()
         else:
-            res_mat = np.concatenate([res_mat, p.gen_mat], axis=0)
+            res_mat = np.concatenate([res_mat, p_inf.gen_mat], axis=0)
     return res_mat[:, index_eff]
 # genmat_effect_all
 
@@ -129,7 +129,7 @@ class PhenotypeInfo:
     variance components are stored
 
     Args:
-        n_population (int): 
+        n_population (int): No. breeding populations
         mean_phenotype (float): Mean phenotype
         var_phenotype (float): Variance of phenotype
         heritatility (float): Heritability
@@ -179,7 +179,7 @@ class PhenotypeInfo:
         self._first_gen = [True] * self.n_population
     # __init__
 
-    def calculate_bv(self, method, par_inf, pro_inf, n_snp, gblup, x,
+    def calculate_bv(self, method, par_inf, pro_inf, n_snp, gblup, x_i,
                      train_gen, train_phe):
         '''
         Calculate phenotype and breeding value
@@ -190,7 +190,7 @@ class PhenotypeInfo:
             pro_inf (list): List of PpulationInfo for progenies
             n_snp (int): No. causal SNPs
             gblup (int): No. neutral SNPs
-            x (int): index of progeny populations
+            x_i (int): index of progeny populations
             train_gen (numpy.ndarray): genotype matrix of training population
             train_phe (numpy.ndarray): phenotypes of training population
 
@@ -211,39 +211,43 @@ class PhenotypeInfo:
                                                 scale=np.sqrt(self.v_s),
                                                 size=n_snp)
         # Genotypte matrix of causal SNPs
-        gen_eff = pro_inf[x].gen_mat[:, self.index_eff]
-        n_progeny = pro_inf[x].n_f + pro_inf[x].n_m
+        gen_eff = pro_inf[x_i].gen_mat[:, self.index_eff]
+        n_progeny = pro_inf[x_i].n_f + pro_inf[x_i].n_m
         # true bv
-        self.true_bv[x] = gen_eff @ self.effect_size.T
-        if self._first_gen[x]:
-            self.mean_pv[x] -= np.mean(self.true_bv[x])
-            self._first_gen[x] = False
+        self.true_bv[x_i] = gen_eff @ self.effect_size.T
+        if self._first_gen[x_i]:
+            self.mean_pv[x_i] -= np.mean(self.true_bv[x_i])
+            self._first_gen[x_i] = False
         # Phenotype
         rand_norm = np.random.normal(loc=0.0, scale=np.sqrt(self.v_e),
                                      size=n_progeny)
-        self.pheno_v[x] = self.mean_pv[x] + self.true_bv[x] + rand_norm
+        self.pheno_v[x_i] = self.mean_pv[x_i] + self.true_bv[x_i] + rand_norm
         # Numerator relationship matrix
-        aq.nrm_cpp(par_inf, pro_inf[x])
+        aq.nrm_cpp(par_inf, pro_inf[x_i])
         # BLUP
         if method == 'BLUP':
             # Breeding value estimation
-            aq.bv_estimation(self, pro_inf[x].a_mat, x)
+            aq.bv_estimation(self, pro_inf[x_i].a_mat, x_i)
         # GBLUP
         elif method == 'GBLUP':
             # Genomic relationship matrix
-            aq.convert_gmatrix(pro_inf[x], pro_inf[x].gen_mat[:, self.index_neu], 0)
+            aq.convert_gmatrix(pro_inf[x_i],
+                               pro_inf[x_i].gen_mat[:, self.index_neu],
+                               0)
             # Breeding value estimation
-            aq.bv_estimation(self, pro_inf[x].g_mat, x)
+            aq.bv_estimation(self, pro_inf[x_i].g_mat, x_i)
         # genomic prediction by GBLUP
         elif method == 'GP':
             # Genomic relationship matrix
-            aq.convert_gmatrix(pro_inf[x], pro_inf[x].gen_mat[:, self.index_neu], 0)
+            aq.convert_gmatrix(pro_inf[x_i],
+                               pro_inf[x_i].gen_mat[:, self.index_neu],
+                               0)
             # G matrix for genomic prediction
             gen_all = np.concatenate([train_gen[:, self.index_neu],
-                                     pro_inf[x].gen_mat[:, self.index_neu]],
+                                     pro_inf[x_i].gen_mat[:, self.index_neu]],
                                      axis=0)
-            aq.convert_gmatrix(pro_inf[x], gen_all, 1)
-            aq.bv_estimation2(self, pro_inf[x].g_mat2, x, train_phe)
+            aq.convert_gmatrix(pro_inf[x_i], gen_all, 1)
+            aq.bv_estimation2(self, pro_inf[x_i].g_mat2, x_i, train_phe)
     # calclaate_phenotype
 # PhenotypeInfo
 

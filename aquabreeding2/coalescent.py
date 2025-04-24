@@ -78,22 +78,20 @@ def add_founder_snp(par_inf, snp_mat):
         s_en = s_st + n_divide[i]
         tmp_snp = snp_mat[:, s_st:s_en]
         # position
-        #tmp_pos = np.random.randint(low=0, high=l_chrom, size=n_divide[i],
-        #                            dtype=np.int32)
         tmp_pos = np.random.choice(for_pos, size=n_divide[i],
                                    replace=False).astype(np.int32)
         tmp_pos.sort()
-        #tmp_pos = unique_pos(l_chrom, n_divide[i])
+        # tmp_pos = unique_pos(l_chrom, n_divide[i])
         # Store the data
         i_c = 0
-        for p in par_inf:
-            for individual in p.pop_f:
+        for p_inf in par_inf:
+            for individual in p_inf.pop_f:
                 i_c = copy_snp(individual.chrom_ls[i], tmp_pos, tmp_snp, i_c)
-        for p in par_inf:
-            for individual in p.pop_m:
+        for p_inf in par_inf:
+            for individual in p_inf.pop_m:
                 i_c = copy_snp(individual.chrom_ls[i], tmp_pos, tmp_snp, i_c)
-            #if p.n_wild is not None:
-            #for individual in p.pop_w:
+            # if p.n_wild is not None:
+            # for individual in p.pop_w:
             #    i_c = copy_snp(individual.chrom_ls[i], tmp_pos, tmp_snp, i_c)
 # add_founder_snp
 
@@ -240,7 +238,7 @@ def run_msprime(n_snp, gblup, n_sample):
 # run_msprime
 
 
-def get_n_t(p_opt, N_anc):
+def get_n_t(p_opt, n_anc):
     '''
     Convert buri demographic parameters of dadi into msprime
 
@@ -252,12 +250,12 @@ def get_n_t(p_opt, N_anc):
         tuple: Parameters for msprime
     '''
     n_b, t_b, n_c, t_c, n_d = p_opt
-    N_b = n_b * N_anc
-    T_b = 2 * t_b * N_anc
-    N_c = n_c * N_anc
-    T_c = 2 * t_c * N_anc
-    N_d = n_d * N_anc
-    return N_b, T_b, N_c, T_c, N_d
+    n_b = n_b * n_anc
+    t_b = 2 * t_b * n_anc
+    n_c = n_c * n_anc
+    t_c = 2 * t_c * n_anc
+    n_d = n_d * n_anc
+    return n_b, t_b, n_c, t_c, n_d
 # get_n_t
 
 
@@ -279,13 +277,15 @@ def run_buri(n_snp, gblup, n_sample):
         n_total = n_snp + gblup
     rate = (4e-8, 2e-7)  # to simulate almost independent SNPs
     p_opt = [0.000907912478, 0.05172956, 0.30586, 0.1125, 9.740]
-    N_anc = 100_000
-    N_b, T_b, N_c, T_c, N_d = get_n_t(p_opt, N_anc)
-    g_rate = -1.0 * np.log(N_c/N_d) / T_c
+    n_anc = 100_000
+    n_b, t_b, n_c, t_c, n_d = get_n_t(p_opt, n_anc)
+    g_rate = -1.0 * np.log(n_c/n_d) / t_c
     demography = mp.Demography()
-    demography.add_population(initial_size=N_d, growth_rate=g_rate)
-    demography.add_population_parameters_change(time=T_c, initial_size=N_b, growth_rate=0)
-    demography.add_population_parameters_change(time=T_c+T_b, initial_size=N_anc,
+    demography.add_population(initial_size=n_d, growth_rate=g_rate)
+    demography.add_population_parameters_change(time=t_c, initial_size=n_b,
+                                                growth_rate=0)
+    demography.add_population_parameters_change(time=t_c+t_b,
+                                                initial_size=n_anc,
                                                 growth_rate=0)
     gsa_out = np.empty((0, 2*n_sample), dtype=np.int32)
     gsa_count = 0  # until n_snp
@@ -313,6 +313,7 @@ def run_buri(n_snp, gblup, n_sample):
                 return gsa_out.T.copy()
 # run_buri
 
+
 def coalescent_simulation(model, par_inf, n_snp, gblup, n_pop, fst, n_female,
                           n_male):
     '''
@@ -331,20 +332,20 @@ def coalescent_simulation(model, par_inf, n_snp, gblup, n_pop, fst, n_female,
     # Wright-Fisher model
     if model == 'WF':
         n_sample = 0
-        for p in par_inf:
-            n_sample += p.n_f + p.n_m
-        #if par_inf.n_wild is not None:
+        for p_inf in par_inf:
+            n_sample += p_inf.n_f + p_inf.n_m
+        # if par_inf.n_wild is not None:
         #    n_sample += par_inf.n_wild
         snp_mat = run_msprime(n_snp, gblup, n_sample)
     # buri
     elif model == 'buri':
         n_sample = 0
-        for p in par_inf:
-            n_sample += p.n_f + p.n_m
+        for p_inf in par_inf:
+            n_sample += p_inf.n_f + p_inf.n_m
         snp_mat = run_buri(n_snp, gblup, n_sample)
     # Structured populations
     elif model == 'SP':
-        #if par_inf.n_wild is not None:
+        # if par_inf.n_wild is not None:
         #    sys.exit('Not implemented yet')
         snp_mat = structured_population(n_snp, gblup, n_pop, fst, n_female,
                                         n_male)

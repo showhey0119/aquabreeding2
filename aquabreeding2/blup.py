@@ -41,7 +41,7 @@ def nrm_cpp(par_inf, pro_inf):
 # nrm_cpp
 
 
-def bv_estimation(phe_inf, g_mat, x):
+def bv_estimation(phe_inf, g_mat, x_i):
     '''
     Estimate breeding values and variance components
     Version 5:
@@ -54,7 +54,7 @@ def bv_estimation(phe_inf, g_mat, x):
     Args:
         phe_inf (PhenotypeInfo): Phenotype information
         g_mat (numpy.ndarray): Genomic/numerator relationship matrix
-        x (int): Index of progeny population
+        x_i (int): Index of progeny population
 
     Note:
         Fixed effect is not implement yet.
@@ -62,7 +62,7 @@ def bv_estimation(phe_inf, g_mat, x):
     def restricted_ml(lam, n_p, theta_vec, omega_sq):
         return (n_p*np.log(np.sum(omega_sq/(theta_vec + lam))) +
                 np.sum(np.log(theta_vec + lam)))
-    y_vec = phe_inf.pheno_v[x]
+    y_vec = phe_inf.pheno_v[x_i]
     n_sample = y_vec.shape[0]
     # design matrix of X and Z
     x_mat = np.ones((n_sample, 1), dtype=np.float64)
@@ -97,18 +97,18 @@ def bv_estimation(phe_inf, g_mat, x):
     opt_para = opt_res.x
     d_f = n_sample - n_p
     # estimate variance components
-    phe_inf.hat_vg[x] = np.sum(omega_sq/(theta_vec + opt_para))/d_f
-    phe_inf.hat_ve[x] = opt_para*phe_inf.hat_vg[x]
+    phe_inf.hat_vg[x_i] = np.sum(omega_sq/(theta_vec + opt_para))/d_f
+    phe_inf.hat_ve[x_i] = opt_para*phe_inf.hat_vg[x_i]
     h_inv = hb_vec @ (hb_vec/(phi_vec+opt_para)).T
     xt_hinv = xt_mat @ h_inv
     w_mat = xt_hinv @ x_mat
     # estimate fixed effects
-    phe_inf.hat_beta[x] = np.linalg.solve(w_mat, xt_hinv @ y_vec)
+    phe_inf.hat_beta[x_i] = np.linalg.solve(w_mat, xt_hinv @ y_vec)
     kz_t = g_mat @ z_mat.T
     kzt_hinv = kz_t @ h_inv
     # estimate breeding value
-    phe_inf.hat_bv[x] = kzt_hinv @ (y_vec - x_mat @ phe_inf.hat_beta[x])
-    phe_inf.hat_beta[x] = x_mat.mean(axis=0) @ phe_inf.hat_beta[x]
+    phe_inf.hat_bv[x_i] = kzt_hinv @ (y_vec - x_mat @ phe_inf.hat_beta[x_i])
+    phe_inf.hat_beta[x_i] = x_mat.mean(axis=0) @ phe_inf.hat_beta[x_i]
 # bv_estimation
 
 
@@ -144,7 +144,7 @@ def convert_gmatrix(pro_inf, gen_array, which_mat):
 # convert_gmatrix
 
 
-def bv_estimation2(phe_inf, g_mat, x, y_vec):
+def bv_estimation2(phe_inf, g_mat, x_i, y_vec):
     '''
     Estimate breeding values and variance components
     Version 5:
@@ -198,21 +198,20 @@ def bv_estimation2(phe_inf, g_mat, x, y_vec):
     opt_para = opt_res.x
     d_f = n_sample - n_p
     # estimate variance components
-    phe_inf.hat_vg[x] = np.sum(omega_sq/(theta_vec + opt_para))/d_f
-    phe_inf.hat_ve[x] = opt_para*phe_inf.hat_vg[x]
+    phe_inf.hat_vg[x_i] = np.sum(omega_sq/(theta_vec + opt_para))/d_f
+    phe_inf.hat_ve[x_i] = opt_para*phe_inf.hat_vg[x_i]
     h_inv = hb_vec @ (hb_vec/(phi_vec+opt_para)).T
     xt_hinv = xt_mat @ h_inv
     w_mat = xt_hinv @ x_mat
     # estimate fixed effects
-    phe_inf.hat_beta[x] = np.linalg.solve(w_mat, xt_hinv @ y_vec)
+    phe_inf.hat_beta[x_i] = np.linalg.solve(w_mat, xt_hinv @ y_vec)
     kz_t = g_mat @ z_mat.T
     kzt_hinv = kz_t @ h_inv
     # estimate breeding value
-    phe_inf.hat_bv[x] = kzt_hinv @ (y_vec - x_mat @ phe_inf.hat_beta[x])
-    phe_inf.hat_bv[x] = phe_inf.hat_bv[x][n_sample:]
-    phe_inf.hat_beta[x] = x_mat.mean(axis=0) @ phe_inf.hat_beta[x]
+    phe_inf.hat_bv[x_i] = kzt_hinv @ (y_vec - x_mat @ phe_inf.hat_beta[x_i])
+    phe_inf.hat_bv[x_i] = phe_inf.hat_bv[x_i][n_sample:]
+    phe_inf.hat_beta[x_i] = x_mat.mean(axis=0) @ phe_inf.hat_beta[x_i]
 # bv_estimation2
-
 
 
 def main():

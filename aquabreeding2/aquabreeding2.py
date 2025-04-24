@@ -25,7 +25,6 @@ Todo:
     * Founders from a population with exponential growth or bottleneck
 '''
 
-import sys
 import numpy as np
 import aquabreeding2 as aq
 
@@ -102,7 +101,7 @@ class AquaBreeding:
             n_male (tuple): Nos. males in populations
         '''
         # check args
-        #if n_pop is not None:
+        # if n_pop is not None:
         #    check_tuple(n_female, 'n_female', n_pop)
         #    check_tuple(n_male, 'n_male', n_pop)
         #    if sum(n_female) != self.par_inf.n_f:
@@ -152,11 +151,13 @@ class AquaBreeding:
         for i in range(self.n_population):
             aq.check_tuple(progeny_size[i], 'progeny_size2', 2)
             if self.pro_inf[i] is None:
-                self.pro_inf[i] = aq.PopulationInfo(progeny_size[i], self.chrom)
+                self.pro_inf[i] = aq.PopulationInfo(progeny_size[i],
+                                                    self.chrom)
                 self.pro_inf[i].init_progeny()
             else:
                 self.pro_inf[i].change_size(progeny_size[i])
-            aq.start_mating(self.cross_inf[i], self.par_inf[i], self.pro_inf[i])
+            aq.start_mating(self.cross_inf[i], self.par_inf[i],
+                            self.pro_inf[i])
     # mating
 
     def breeding_value(self, method, training=False, reset_training=False):
@@ -178,17 +179,19 @@ class AquaBreeding:
         for i in range(self.n_population):
             aq.check_method(method[i])
             self.phe_inf.calculate_bv(method[i], self.par_inf[i], self.pro_inf,
-                                      self.n_snp, self.gblup, i, self.train_gen,
-                                      self.train_phe)
+                                      self.n_snp, self.gblup, i,
+                                      self.train_gen, self.train_phe)
         if training:
             if reset_training:
-                self.train_gen is None
-                self.train_phe is None
-            for i, p in enumerate(self.pro_inf):
+                self.train_gen = None
+                self.train_phe = None
+            for i, p_inf in enumerate(self.pro_inf):
                 if self.train_gen is None:
-                    self.train_gen = p.gen_mat
+                    self.train_gen = p_inf.gen_mat
                 else:
-                    self.train_gen = np.concatenate([self.train_gen, p.gen_mat], axis=0)
+                    self.train_gen = np.concatenate([self.train_gen,
+                                                    p_inf.gen_mat],
+                                                    axis=0)
                 if self.train_phe is None:
                     self.train_phe = self.phe_inf.pheno_v[i].copy()
                 else:
@@ -240,7 +243,8 @@ class AquaBreeding:
             check_r = aq.start_selection(self.par_inf[i], self.pro_inf[i],
                                          self.phe_inf, target[i], method[i],
                                          self.cross_inf[i], top_prop[i],
-                                         n_family[i], select_size[i], max_r[i], i)
+                                         n_family[i], select_size[i], max_r[i],
+                                         i)
         return check_r
     # selection
 
@@ -301,14 +305,14 @@ class AquaBreeding:
         Args:
             num (tuple): No. famale/male parents relpaced by wild individuals
         '''
-        check_tuple(num, 'num', 2)
-        self.par_inf.replace_wild(num)
+        aq.check_tuple(num, 'num', 2)
+        # self.par_inf.replace_wild(num)
     # wild_parent
 
     def get_mean_phenotype(self):
         '''
         Output mean phenotypes of all breeding populations
-        
+
         Returns:
             list: mean phenotypes
         '''
