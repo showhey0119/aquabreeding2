@@ -159,7 +159,7 @@ class PhenotypeInfo:
         Constructor
         '''
         self.n_population = n_population
-        self.mean_pv = [mean_phenotype, mean_phenotype]
+        self.mean_pv = [mean_phenotype] * self.n_population
         self.var_p = var_phenotype
         self.h2_p = heritability
         self.v_g = None
