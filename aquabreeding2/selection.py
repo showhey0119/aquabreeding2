@@ -379,13 +379,14 @@ def copy_individual(ls_founder, ls_progeny, ls_index):
 # copy_individual
 
 
-def merge_pop(par_inf, target):
+def merge_pop(par_inf, target, generation):
     '''
     Merge two populations
 
     Args:
         pro_inf (list): List of breeding populations
         target (list): Index (start with 1) of merged populations
+        generation (int): Generation
     '''
     if target[0] > target[1]:
         tmp_v = target[0]
@@ -399,20 +400,86 @@ def merge_pop(par_inf, target):
     p_2 = par_inf[i_en]
     # adjust the size
     p_1.change_size(new_size=(p_1.n_f, p_2.n_m))
+    #print('p_1')
+    #for k in p_1.d_par:
+    #    print('1', k, p_1.d_par[k]['mat'], p_1.d_par[k]['pat'], p_1.d_par[k]['gen'])
+    #print('p_2')
+    #for k in p_2.d_par:
+    #    print('2', k, p_2.d_par[k]['mat'], p_2.d_par[k]['pat'], p_2.d_par[k]['gen'])
+    # Merge dict for pedigree
+    d_new = {}
+    i_new = 0
+    conv_1 = {}
+    conv_2 = {}
+    # generation 1
+    # p_1
+    n_founder = 0
+    for k in p_1.d_par:
+        if p_1.d_par[k]['gen'] != 1:
+            continue
+        d_new[i_new] = {}
+        d_new[i_new]['mat'] = -1
+        d_new[i_new]['pat'] = -1
+        d_new[i_new]['gen'] = 1
+        conv_1[k] = i_new
+        i_new += 1
+        n_founder += 1
+    # p_2
+    for k in p_2.d_par:
+        if p_2.d_par[k]['gen'] != 1:
+            continue
+        d_new[i_new] = {}
+        d_new[i_new]['mat'] = -1
+        d_new[i_new]['pat'] = -1
+        d_new[i_new]['gen'] = 1
+        conv_2[k] = i_new
+        i_new += 1
+        n_founder += 1
+    for g in range(2, generation):
+        for k in p_1.d_par:
+            if p_1.d_par[k]['gen'] != g:
+                continue
+            d_new[i_new] = {}
+            d_new[i_new]['mat'] = conv_1[p_1.d_par[k]['mat']]
+            d_new[i_new]['pat'] = conv_1[p_1.d_par[k]['pat']]
+            d_new[i_new]['gen'] = g
+            conv_1[k] = i_new
+            i_new += 1
+        for k in p_2.d_par:
+            if p_2.d_par[k]['gen'] != g:
+                continue
+            d_new[i_new] = {}
+            d_new[i_new]['mat'] = conv_2[p_2.d_par[k]['mat']]
+            d_new[i_new]['pat'] = conv_2[p_2.d_par[k]['pat']]
+            d_new[i_new]['gen'] = g
+            conv_2[k] = i_new
+            i_new += 1
+    #print('new')
+    #for k in d_new:
+    #    print('3', k, d_new[k]['mat'], d_new[k]['pat'], d_new[k]['gen'])
+    # Refresh new IDs for female
+    for f in p_1.pop_f:
+        f.sample_id = -1
+        f.mat_id = conv_1[f.mat_id]
+        f.pat_id = conv_1[f.pat_id]
     # copy males in p_2 to ones in p_1
     for m_1, m_2 in zip(p_1.pop_m, p_2.pop_m):
-        m_1.mat_id = 0
-        m_1.pad_id = 1
+        m_1.sample_id = -1
+        m_1.mat_id = conv_2[m_2.mat_id]
+        m_1.pad_id = conv_2[m_2.pat_id]
         for c_1, c_2 in zip(m_1.chrom_ls, m_2.chrom_ls):
             aq.copy_1D(c_2.position, c_1.position)
             aq.copy_1D(c_2.snp_mat, c_1.snp_mat)
             aq.copy_1D(c_2.snp_pat, c_1.snp_pat)
-    p_1.new_founder_id()
+    p_1.d_par = d_new.copy()
+    p_1.tmp_id = i_new
+    p_1.n_founder = n_founder
+    p_1.new_founder_id(generation)
     del par_inf[i_en]
 # merge_pop
 
 
-def nextgen_parents(par_inf, pro_inf, f2_index, m2_index):
+def nextgen_parents(par_inf, pro_inf, f2_index, m2_index, generation):
     '''
     Copy selected progenies to founder population
 
@@ -421,18 +488,19 @@ def nextgen_parents(par_inf, pro_inf, f2_index, m2_index):
         pro_inf (PopulationInfo): Progeny population
         f2_index (list): Arranged index of selected females
         m2_index (list): Arranged index of selected males
+        generation (int): Generation
     '''
     # female
     copy_individual(par_inf.pop_f, pro_inf.pop_f, f2_index)
     # male
     copy_individual(par_inf.pop_m, pro_inf.pop_m, m2_index)
     # add new parents' ID
-    par_inf.new_founder_id()
+    par_inf.new_founder_id(generation)
 # nextgen_parent
 
 
 def start_selection(par_inf, pro_inf, phe_inf, target, method, cross_inf,
-                    top_prop, n_family, select_size, max_r, x_i):
+                    top_prop, n_family, select_size, max_r, x_i, generation):
     '''
     Args:
         par_inf (PopulationInfo): Founder population
@@ -453,6 +521,7 @@ def start_selection(par_inf, pro_inf, phe_inf, target, method, cross_inf,
         select_size (tulple): Number of selected founders
         max_r (float): R' among selected individuals is less than this value
         x_i (int): Index of progeny population
+        generation (int): Generation
 
     Returns:
         int: If 0, excuted correctly, if 1, terminated irreguraly
@@ -505,7 +574,7 @@ def start_selection(par_inf, pro_inf, phe_inf, target, method, cross_inf,
     f2_index, m2_index = arrange_parents(k_mat, cross_inf, select_size,
                                          f_index, m_index, pro_inf.n_f)
     # Copy selected progenies to founder
-    nextgen_parents(par_inf, pro_inf, f2_index, m2_index)
+    nextgen_parents(par_inf, pro_inf, f2_index, m2_index, generation)
     return 0
 # start_selection
 

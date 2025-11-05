@@ -84,6 +84,8 @@ class AquaBreeding:
         # Genomic prediction for GBLUP
         self.train_gen = None
         self.train_phe = None
+        # generation
+        self.generation = 1
     # __init__
 
     def snp(self, model, n_snp, gblup=None, n_pop=None, fst=None,
@@ -234,6 +236,7 @@ class AquaBreeding:
         if select_size is None:
             select_size = [None] * self.n_population
         aq.check_tuple(select_size, 'select_size', self.n_population)
+        self.generation += 1
         for i in range(self.n_population):
             if select_size[i] is None:
                 select_size[i] = (self.par_inf[i].n_f, self.par_inf[i].n_m)
@@ -244,7 +247,7 @@ class AquaBreeding:
                                          self.phe_inf, target[i], method[i],
                                          self.cross_inf[i], top_prop[i],
                                          n_family[i], select_size[i], max_r[i],
-                                         i)
+                                         i, self.generation)
         return check_r
     # selection
 
@@ -335,6 +338,20 @@ class AquaBreeding:
         return np.array(res_i)
     # get_mean_ibd
 
+    def get_mean_ibd_g(self):
+        '''
+        Output meaninbreeding coefficient of all breeding populations
+        using G matrix
+
+        Returns:
+            list: mean ibd
+        '''
+        res_i = []
+        for i in range(self.n_population):
+            res_i.append(np.mean(np.diag(self.pro_inf[i].g_mat) - 1.0))
+        return np.array(res_i)
+    # get_mean_ibd_g
+
     def merge_population(self, target):
         '''
         Merge two breeding populations and remove second one
@@ -344,7 +361,7 @@ class AquaBreeding:
         Args:
             target (list): Index (starts with 1) of two breeding populations
         '''
-        aq.merge_pop(self.par_inf, target)
+        aq.merge_pop(self.par_inf, target, self.generation)
         self.n_population -= 1
     # merge_population
 # AquaBreeding

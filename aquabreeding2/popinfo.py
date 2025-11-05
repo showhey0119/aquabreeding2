@@ -164,6 +164,7 @@ class PopulationInfo:
             self.d_par[self.tmp_id] = {}
             self.d_par[self.tmp_id]['mat'] = -1
             self.d_par[self.tmp_id]['pat'] = -1
+            self.d_par[self.tmp_id]['gen'] = 1
             self.tmp_id += 1
         # male
         for _ in range(self.n_m):
@@ -171,6 +172,7 @@ class PopulationInfo:
             self.d_par[self.tmp_id] = {}
             self.d_par[self.tmp_id]['mat'] = -1
             self.d_par[self.tmp_id]['pat'] = -1
+            self.d_par[self.tmp_id]['gen'] = 1
             self.tmp_id += 1
         # extral natural individuals
         if self.n_wild is not None:
@@ -179,6 +181,7 @@ class PopulationInfo:
                 self.d_par[self.tmp_id] = {}
                 self.d_par[self.tmp_id]['mat'] = -1
                 self.d_par[self.tmp_id]['pat'] = -1
+                self.d_par[self.tmp_id]['gen'] = 1
                 self.tmp_id += 1
     # init_founder
 
@@ -240,9 +243,12 @@ class PopulationInfo:
         aq.snp_to_genotype(self.gen_mat, snp_pro)
     # genotype_matrix
 
-    def new_founder_id(self):
+    def new_founder_id(self, generation):
         '''
         Set IDs for new founder
+
+        Args:
+            generation (int): Generation
         '''
         # female
         for individual in self.pop_f:
@@ -250,6 +256,7 @@ class PopulationInfo:
             self.d_par[self.tmp_id] = {}
             self.d_par[self.tmp_id]['mat'] = individual.mat_id
             self.d_par[self.tmp_id]['pat'] = individual.pat_id
+            self.d_par[self.tmp_id]['gen'] = generation
             self.tmp_id += 1
         # male
         for individual in self.pop_m:
@@ -257,6 +264,7 @@ class PopulationInfo:
             self.d_par[self.tmp_id] = {}
             self.d_par[self.tmp_id]['mat'] = individual.mat_id
             self.d_par[self.tmp_id]['pat'] = individual.pat_id
+            self.d_par[self.tmp_id]['gen'] = generation
             self.tmp_id += 1
     # new_founder_id
 
